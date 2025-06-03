@@ -1,236 +1,122 @@
-from PyQt6.QtGui import QDoubleValidator
-from PyQt6.QtWidgets import QMainWindow, QWidget, QLabel, QVBoxLayout, QLineEdit, QPushButton, QHBoxLayout, \
-    QApplication, QCheckBox, QMessageBox
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QMainWindow, QWidget, QLabel, QVBoxLayout, QPushButton, QHBoxLayout, \
+    QApplication, QStackedWidget
 import sys
 
-class HomeScreen(QMainWindow):
-    """
-       The main window of the Bills Manager application.
+from screens.category_screen import CategoryWindow
 
-       This class creates the main UI layout, including:
-       - A navbar with input and button to add payments.
-       - A central body area that displays all payment entries.
-       - A summary section showing total amount.
 
-       Attributes:
-           payment_count (int): Counter to alternate row colors for payments.
-           payment_textbox (QLineEdit): Input field to enter payment name.
-           body_layout (QVBoxLayout): Layout to hold all payment entries.
-    """
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Bills Manager")
         self.setGeometry(100, 100, 800, 600)
 
-        self.payment_count = 0
-
         # Main Container
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        # Main Layout
+        # ========== MAIN LAYOUT ========== #
         main_layout = QVBoxLayout()
         central_widget.setLayout(main_layout)
 
-        # NAVBAR
-        navbar = QWidget()
-        navbar_layout = QHBoxLayout()
-        navbar.setLayout(navbar_layout)
-        navbar.setStyleSheet('background-color: darkGray')
+        #Main Navbar
+        main_navbar = QWidget()
+        main_navbar_layout = QHBoxLayout()
+        main_navbar.setLayout(main_navbar_layout)
+        main_navbar.setFixedHeight(90)
 
-        # NAVBAR ELEMENTS
-        title_label = QLabel("Bill Manager")
+        #Main Navbar - buttons
+        home_btn = QPushButton("Home")
+        home_btn.setIcon(QIcon("icons/home.png"))
+        home_btn.setIconSize(QSize(24, 24))
+        home_btn.clicked.connect(self.goto_home)
 
-        self.payment_textbox = QLineEdit()
-        self.payment_textbox.setPlaceholderText("Add new payment...")
+        reports_btn = QPushButton("Reports")
+        reports_btn.setIcon(QIcon("icons/reports.png"))
+        reports_btn.setIconSize(QSize(24, 24))
 
-        add_payment_button = QPushButton("Add Payment")
-        add_payment_button.clicked.connect(self.add_payment)
+        savings_btn = QPushButton("Savings")
+        savings_btn.setText("Savings")
+        savings_btn.setIcon(QIcon("icons/piggy.png"))
+        savings_btn.setIconSize(QSize(24, 24))
+        savings_btn.setFixedWidth(100)
 
-        navbar_layout.addWidget(title_label)
-        navbar_layout.addWidget(self.payment_textbox)
-        navbar_layout.addWidget(add_payment_button)
+        language_btn = QPushButton("Language")
+        language_btn.setFixedWidth(100)
 
-        # BODY
-        self.body = QWidget()
-        self.body_layout = QVBoxLayout()
-        self.body.setLayout(self.body_layout)
+        main_navbar_layout.addWidget(home_btn)
+        main_navbar_layout.addWidget(reports_btn)
+        main_navbar_layout.addWidget(savings_btn)
+        main_navbar_layout.addWidget(language_btn)
 
-        # SUMMARY
-        sum_section = QWidget()
-        sum_section_layout = QHBoxLayout()
-        sum_section.setLayout(sum_section_layout)
-        sum_section.setStyleSheet('background-color: gray')
+        main_layout.addWidget(main_navbar)  # Navbar
 
+        # ========== MIDDLE LAYOUT ========== #
+        middle_layout = QHBoxLayout()
+        main_layout.addLayout(middle_layout)
 
+        #Main Side Menu
+        main_sideMenu = QWidget()
+        main_sideMenu_layout = QVBoxLayout()
+        main_sideMenu.setLayout(main_sideMenu_layout)
+        main_sideMenu.setStyleSheet('background-color: #1D1E18')
+        main_sideMenu.setFixedWidth(120)
 
-        self.sum_lbl = QLabel('Summary to pay: 0,00 zł')
-        sum_section_layout.addWidget(self.sum_lbl)
+        #Side Menu - buttons + labels
+        title_menu_lbl = QLabel("MENU")
+        title_menu_lbl.setStyleSheet('background-color: #B0C7BD')
+        title_menu_lbl.setFixedHeight(20)
+        title_menu_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Add NAVBAR and Body to main_layout
-        main_layout.addWidget(navbar)
-        main_layout.addWidget(self.body)
-        main_layout.addWidget(sum_section)
+        self.categories_btn = QPushButton("CATEGORIES")
+        self.categories_btn.setStyleSheet('background-color: #EDF2EF')
+        self.categories_btn.clicked.connect(self.goto_categories)
 
-    def add_payment(self):
-        """
-        Adds a new payment entry to the main view.
+        history_btn = QPushButton("HISTORY")
+        history_btn.setStyleSheet('background-color: #EDF2EF')
 
-        This method retrieves the text from the input field (self.payment_textbox),
-        and if it is not empty, creates a new horizontal layout with:
-            - a label showing the payment description,
-            - an input field for entering the payment amount,
-            - a checkbox, with default true value, to validate if current payment is needed
-            - a button for editing the entry (placeholder for future functionality),
-            - a del button to delete whole current payment section.
+        main_sideMenu_layout.addWidget(title_menu_lbl)
+        main_sideMenu_layout.addWidget(self.categories_btn)
+        main_sideMenu_layout.addWidget(history_btn)
 
-        The created layout is added to the vertical body layout that holds all payment entries.
-        After the entry is added, the input field is cleared.
-        """
-        text = self.payment_textbox.text()
-        if text.strip():
+        middle_layout.addWidget(main_sideMenu)  # Side Menu on left
 
-            payment = Payment(text)
+        # ========== CENTRAL VIEW (zmieniany ekran) ========== #
+        self.central_view = QStackedWidget()
+        middle_layout.addWidget(self.central_view)  # Central view
 
-            if self.payment_count % 2 == 0:
-                payment.setStyleSheet("background-color: #f9f9f9;")
-            else:
-                payment.setStyleSheet("background-color: #e6e6e6;")
+        # ========== VIEWS ========== #
+        self.home_screen = HomeScreen()
+        self.categories_screen = CategoryWindow()
+        self.history_screen = QLabel("HISTORY SCREEN")
 
-            self.body_layout.addWidget(payment)
+        self.central_view.addWidget(self.home_screen)
+        self.central_view.addWidget(self.categories_screen)
+        self.central_view.addWidget(self.history_screen)
 
-            self.payment_textbox.clear()
-            self.payment_count += 1
+        self.central_view.setCurrentWidget(self.home_screen)  # default view
 
-            payment.connect_signals(self.calculate_summary)
+    def goto_home(self):
+        self.central_view.setCurrentWidget(self.home_screen)
 
-    def calculate_summary(self):
-        """
-        Calculates the total sum from all Payment widgets
-        that are checked with 'Add to summary' checkbox.
-        """
-        total = 0.00
-
-        for i in range(self.body_layout.count()):
-            payment_widget = self.body_layout.itemAt(i).widget()
-
-            if isinstance(payment_widget, Payment):
-                if payment_widget.val_payment_cbox.isChecked():
-                    text = payment_widget.payment_amount.text().replace(',', '.')
-                    try:
-                        value = float(text)
-                        total += value
-                        self.sum_lbl.setText(
-                            f"Summary to pay: {total:,.2f} zł".replace(",", "X").replace(".", ",").replace("X", "."))
-                    except ValueError:
-                        pass  # ignore invalid entries (e.g. empty or incorrect format)
+    def goto_categories(self):
+        self.central_view.setCurrentWidget(self.categories_screen)
 
 
-
-
-class Payment(QWidget):
-    """
-    Represents a single payment entry in the Bills Manager UI.
-
-    Components:
-        - Label: shows the name/description of the payment.
-        - LineEdit: input for entering the payment amount.
-        - QCheckBox: allows toggling inclusion in summary.
-        - QPushButton (Edit): placeholder for future editing functionality.
-        - QPushButton (Delete): placeholder for future deletion functionality.
-    """
-    def __init__(self, name: str):
+class HomeScreen(QWidget):
+    def __init__(self):
         super().__init__()
+        layout = QVBoxLayout()
+        label = QLabel("Welcome to Bills Manager!")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(label)
+        self.setLayout(layout)
 
-        self.payment_layout = QHBoxLayout()
-        self.setLayout(self.payment_layout)
-        self.setFixedHeight(45)
-
-        self.name = name
-
-        # label with payment description
-        self.label = QLabel(name)
-        self.label.setStyleSheet("padding: 5px; border: 1px solid gray;")
-
-        # texbox for pay amount
-        self.payment_amount = QLineEdit()
-        self.payment_amount.setPlaceholderText('0,00')
-        self.payment_amount.setFixedWidth(80)
-
-        validator = QDoubleValidator(0.00, 999999.99, 2) #min, max, precision
-        validator.setNotation(QDoubleValidator.Notation.StandardNotation)
-        self.payment_amount.setValidator(validator)
-
-        # validate checkbox
-        self.val_payment_cbox = QCheckBox('Add to summary')
-        self.val_payment_cbox.setFixedWidth(180)
-        self.val_payment_cbox.setChecked(True)
-
-        # EDIT
-        self.edit_button = QPushButton('Edit')
-        self.edit_button.setFixedWidth(90)
-
-        self.edit_button.clicked.connect(self.edit_payment)
-
-
-        # DELETE
-        self.del_button = QPushButton('Delete')
-        self.del_button.setFixedWidth(90)
-        self.del_button.clicked.connect(self.del_payment)
-
-        # Add elements to payment layout
-        self.payment_layout.addWidget(self.label)
-        self.payment_layout.addWidget(self.payment_amount)
-        self.payment_layout.addWidget(self.val_payment_cbox)
-        self.payment_layout.addWidget(self.edit_button)
-        self.payment_layout.addWidget(self.del_button)
-
-    def edit_payment(self):
-        """
-        Allows editing the payment name.
-
-        Hides the label and replaces it with a QLineEdit.
-        When Enter is pressed, saves the new name.
-        """
-        self.name_input = QLineEdit(self.label.text())
-        self.payment_layout.removeWidget(self.label)
-        self.label.hide()
-
-        self.payment_layout.insertWidget(0, self.name_input)
-        self.name_input.setFocus()
-        self.name_input.returnPressed.connect(self.save_edit)
-
-    def save_edit(self):
-        """
-        Saves the new name entered in the QLineEdit,
-        updates the label, and restores the UI.
-        """
-        new_name = self.name_input.text()
-        self.name = new_name
-        self.label.setText(new_name)
-
-        self.payment_layout.removeWidget(self.name_input)
-        self.name_input.deleteLater()
-
-        self.payment_layout.insertWidget(0, self.label)
-        self.label.show()
-
-    def del_payment(self):
-        """
-        Asks for confirmation and deletes the current payment widget
-        if user confirms the action.
-        """
-        reply = QMessageBox.question(self, 'Delete Payment',
-                                     f"Are you sure you want to delete '{self.label.text()}'?",
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-
-        if reply == QMessageBox.StandardButton.Yes:
-            parent = self.parent()
-            self.setParent(None)
-            self.deleteLater()
-            if hasattr(parent, 'calculate_summary'):
-                parent.calculate_summary()
-
-    def connect_signals(self, callback):
-        self.payment_amount.textChanged.connect(callback)
-        self.val_payment_cbox.stateChanged.connect(callback)
+        self.setStyleSheet("""
+            background-image: url('resources/Home Screen.jpg');  /* background path */
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover;
+        """)
